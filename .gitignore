@@ -10,3 +10,6 @@ data_clean/*.txt
 
 # Suppress data figures
 data_figs/
+
+# Suppress model output
+model_output/
