@@ -1,0 +1,134 @@
+---
+title: "Benchmarking the logistic growth model"
+author: "Jessica Guo"
+date: "12/22/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+## Overview
+
+The Bayesian version of the logistic growth model will return maximum height, minimum height, and maximum growth rate for a single cultivar. The first argument is a dataframe containing canopy height (canopy_height), growing degree days (gdd), and block if applicable (site). 
+
+There are two versions of this function: type = "simple" will treat all blocks the same, while type = "RE" will fit a random coefficients model for each block. If there is only one block per cultivar, type = "simple" will be run automatically. 
+
+The final argument, outdir, defines the path where files should be saved. A folder for each cultivar will be created, in which the following will be saved:
+1.) Gelman diagnostics as gelman_cultivar.Rdata
+2.) Posterior chains as mcmc_cultivar.Rdata
+3.) Traceplots ('fuzzy catepillars') of the 3 parameters (Ymax, Ymin, and Ghalf) and the population standard deviation(sig) as trace_cultivar.jpg
+4.) Summary of posterior chains as mcmc_sum_cultivar.Rdata
+5.) Plot of predicted vs observed canopy heights as fit_cultivar.jpg
+6.) Summary of important posteriors, model convergence, and model fit parameters as out.Rdata. This dataframe is also returned by the function. 
+
+```{r}
+library(dplyr)
+source("fit_logistic_growth.R")
+library(rbenchmark)
+```
+
+Read in data. 
+
+```{r}
+set.seed(5)
+season6 <- na.omit(read.table(file = "data_clean/season6_combined.txt", sep = "\t",
+                              header = TRUE,
+                              stringsAsFactors = FALSE))
+```
+
+## Diagnostics: single cultivar
+
+Randomly select a single cultivar and test both the "simple" and the "RE" models. 
+
+```{r}
+#randomly sample 1 cultivar from the season for testing model
+s6_cultivars <- sample(unique(season6$cultivar), size = 1)
+
+#subset season6 dataframe by 10 randomly selected cultivars
+s6_subset <- season6 %>%  filter(cultivar %in% "PI329517") %>% 
+  select(sitename, gdd, canopy_height, cultivar, date) %>% 
+  arrange(date) %>%
+  mutate(site = as.numeric(as.factor(sitename)))
+
+benchmark(
+  "simple" = {
+  out <- fit_logistic_growth(data = s6_subset,
+                           type = "simple",
+                           outdir = "model_test")
+  },
+  "RE" = {
+  out2 <- fit_logistic_growth(data = s6_subset,
+                           type = "RE",
+                           outdir = "model_test")
+  },
+  replications = 1,
+  columns = c("test", "replications", "elapsed",
+            "relative", "user.self", "sys.self")
+)
+
+```
+
+## Diagnostics: 10 cultivars with for loop
+
+```{r}
+
+s6_cultivars <- sample(unique(season6$cultivar), size = 10)
+
+# Loop to subset dataframe by cultivar and run the RE model
+out10 <- c()
+st <- proc.time()
+for(i in 1:10){
+  sub <- season6 %>%  filter(cultivar %in% s6_cultivars[i]) %>% 
+  select(sitename, gdd, canopy_height, cultivar, date) %>% 
+  arrange(date) %>%
+  mutate(site = as.numeric(as.factor(sitename)))
+  
+  temp <- fit_logistic_growth(data = sub,
+                           type = "RE",
+                           outdir = "model_test")
+  out10 <- rbind(out10, temp)
+}
+en <- proc.time()
+dur <- (en - st) /60
+# user = 4.9 minutes; elapsed = 5.2 minutes
+```
+
+
+## Diagnostics: 10 cultivars with lapply
+
+```{r}
+# Function to turn site as numeric within cultivar
+add_site <- function(x){
+  x$site <- as.numeric(as.factor(x$sitename))
+  return(x)
+}
+
+# Prep data, split into list by cultivar
+s6_cultivars <- sample(unique(season6$cultivar), size = 10)
+sub <- subset(season6, cultivar %in% s6_cultivars,
+              select = c(sitename, gdd, canopy_height, cultivar, date))[order(season6$date),] 
+sub.list <- split(sub, f = sub$cultivar)
+sub.list <- lapply(sub.list, FUN = add_site)
+
+# Run with lapply
+out10.RE <- list()
+out10.sim <- list()
+benchmark(
+  "simple" = {
+    out10.sim <- lapply(sub.list, FUN = fit_logistic_growth, 
+                        type = "RE", outdir = "model_test")
+  },
+  "RE" = {
+    out10.RE <- lapply(sub.list, FUN = fit_logistic_growth, 
+                       type = "RE", outdir = "model_test")
+
+
+  },
+  replications = 1,
+  columns = c("test", "replications", "elapsed",
+            "relative", "user.self", "sys.self")
+)
+
+save(out10.RE, file = "model_test/out10.RE.Rdata")
+save(out10.sim, file = "model_test/out10.sim.Rdata")
+```
