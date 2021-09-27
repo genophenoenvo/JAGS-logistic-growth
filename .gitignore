@@ -13,3 +13,6 @@ data_figs/
 
 # Suppress model output
 model_output/
+
+# Suppress model tests
+model_test/
