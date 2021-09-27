@@ -1,0 +1,171 @@
+---
+title: "Running logistic growth by cultivar"
+author: "Jessica Guo"
+date: "1/4/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Overview
+This script applies a hierarchical Bayesian model for logistic growth to obtain 3 parameters for each cultivar: maximum and minimum height (cm), and maximum growth rate (cm/gdd). 
+
+
+Load libraries
+```{r}
+library(dplyr)
+source("source/fit_logistic_growth.R")
+library(ggplot2)
+library(forcats)
+```
+
+Read in MAC seasons 4 and 6 cleaned height data. 
+```{r}
+season4 <- na.omit(read.table(file = "data_clean/season4_combined.txt", sep = "\t",
+                              header = TRUE,
+                              stringsAsFactors = FALSE))
+
+length(c(table(season4$cultivar)))
+season6 <- na.omit(read.table(file = "data_clean/season6_combined.txt", sep = "\t",
+                              header = TRUE,
+                              stringsAsFactors = FALSE))
+length(c(table(season6$cultivar)))
+```
+
+## Running models with lapply for all cultivars
+Add sites as a numeric value for model run. Split each season into separate lists by cultivar. Check number of sites per cultivar. 
+```{r}
+# Function to turn site into numeric within cultivar
+add_site <- function(x) {
+  x$site <- as.numeric(as.factor(x$sitename))
+  return(x)
+}
+
+# split into list of 336 or 326 cultivars and add sites
+s4 <- subset(season4, select = c(sitename, gdd, canopy_height, 
+                                 cultivar, date))[order(season4$date),] 
+s4.list <- split(s4, f = s4$cultivar)
+s4.list <- lapply(s4.list, FUN = add_site)
+
+s6 <- subset(season6, select = c(sitename, gdd, canopy_height, 
+                                 cultivar, date))[order(season6$date),] 
+s6.list <- split(s6, f = s6$cultivar)
+s6.list <- lapply(s6.list, FUN = add_site)
+
+# Check sites per cultivar
+nsite <- function(x) {length(unique(x$site))}
+summary(do.call(rbind, lapply(s4.list, nsite))) # between 2 and 11
+summary(do.call(rbind, lapply(s6.list, nsite))) # between 1 and 99, with 99 a distinct outlier
+
+# Remove cultivar SP1516 at 99 sites
+# Not enough observations per site to allow for model convergence with hierarchical model
+rem.cult <- names(s6.list)[which.max(do.call(rbind, lapply(s6.list, nsite)))]
+temp <- filter(s6, cultivar != rem.cult)
+temp2 <- split(temp, f = temp$cultivar)
+s6.list.clean <- lapply(temp2, FUN = add_site)
+
+# Keep SP1516 for simple model
+s6.sp1516 <- filter(s6, cultivar == rem.cult)
+```
+
+Run model for both seasons. 
+```{r}
+# run for season 4
+start <- proc.time()
+out.s4 <- lapply(s4.list, FUN = fit_logistic_growth, 
+                        type = "RE", outdir = "model_output/season4")
+end <- proc.time()
+dur <- (end-start)[[3]]/60/60
+
+# run for season 6
+start <- proc.time()
+# 325 cultivars
+out.s6 <- lapply(s6.list.clean, FUN = fit_logistic_growth,
+                 type = "RE", outdir = "model_output/season6")
+# cultivar SP1516
+fit_logistic_growth(data = s6.sp1516,
+                    type = "simple",
+                    outdir = "model_output/season6")
+end <- proc.time()
+dur <- (end-start)[[3]]/60/60
+```
+
+### Combine and plot
+
+Read in cultivar-specific output. 
+```{r}
+# from saved model outputs
+# Season 4
+cultivars <- list.files("model_output/season4")
+out.s4 <- list()
+for (i in 1:length(cultivars)){
+  load(file.path("model_output/season4", cultivars[i], "out.Rdata"))
+  out <- out %>%
+    mutate(season = "season_4")
+  out.s4[[i]] <- out
+}
+
+# Season 6
+cultivars <- list.files("model_output/season6")
+out.s6 <- list()
+for (i in 1:length(cultivars)){
+  load(file.path("model_output/season6", cultivars[i], "out.Rdata"))
+  out <- out %>%
+    mutate(season = "season_6")
+  out.s6[[i]] <- out
+}
+
+# combine into single dataframe
+s4.df <- do.call(rbind, out.s4)
+s6.df <- do.call(rbind, out.s6)
+all.df <- rbind(s4.df, s6.df) %>%
+  arrange(r2)
+
+# Create output
+out.csv <- all.df %>%
+  select(season, cultivar, type,
+         Ymax.median, # Ymax.lower, Ymax.upper,
+         Ymin.median, # Ymin.lower, Ymin.upper,
+         Ghalf.median, # Ghalf.lower, Ghalf.upper,
+         r2) %>%
+  rename(genotype = cultivar, method_type = type,
+         max_height_cm = Ymax.median,
+         min_height_cm = Ymin.median,
+         max_growth_cm_gdd = Ghalf.median) %>%
+  mutate(method = "Bayesian logistic model of canopy height vs. gdd") %>%
+  relocate(method_type, .after = last_col()) %>%
+  arrange(season,r2)
+
+write.csv(out.csv, file = "data_clean/mac_growth_rate_modeled.csv", row.names = F)
+```
+
+Plot maximum height and growth rate by cultivar and season. 
+```{r}
+# Maximum height by cultivar and season
+all.df %>%
+  mutate(cultivar = fct_reorder(cultivar, Ymax.median)) %>%
+  ggplot(aes(x = cultivar, y = Ymax.median)) + 
+  geom_point(aes(color = season)) +
+  # geom_errorbar(aes(ymin = Ymax.lower, ymax = Ymax.upper), alpha = 0.25) +
+  scale_y_continuous("Ymax (cm)") +
+  theme_bw(base_size = 12) +
+  coord_flip()
+
+# Max growth rate by cultivar and season
+all.df %>%
+  mutate(cultivar = fct_reorder(cultivar, Ghalf.median)) %>%
+  ggplot(aes(x = cultivar, y = Ghalf.median)) + 
+  geom_point(aes(color = season)) +
+  # geom_errorbar(aes(ymin = Ghalf.lower, ymax = Ghalf.upper), alpha = 0.25) +
+  scale_y_continuous("Ghalf (cm/gdd)") +
+  theme_bw(base_size = 12) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+  coord_flip()
+```
+
+
