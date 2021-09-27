@@ -1,0 +1,38 @@
+# logistic growth model
+# no hierarchy
+# reparameterized to Ymin, Ymax, and Ghalf
+
+model{
+  for(i in 1:n){
+    # likelihood
+    height[i] ~ dnorm(mu[i], tau)
+    height.rep[i] ~ dnorm(mu[i], tau)
+    
+    # logistic expression
+    mu[i] = c / (1 + a * exp(b * gdd[i]))
+    
+    # calculation for posterior predictive loss
+    Sqdiff[i] <- pow(height.rep[i] - height[i], 2)
+  }
+  
+  # reparameterization to meaninful parameters
+  Ymax <- c
+  Ymin <- c / (1 + a)
+  Ghalf <- -1 * (c * b) / 4
+  
+  c <- exp(theta.c)
+  a <- exp(theta.a) - 1
+  b <- -1  * exp(theta.b)
+    
+  # root node prior - parameters
+  theta.a ~ dnorm(0, 0.001)
+  theta.b ~ dnorm(0, 0.001)
+  theta.c ~ dnorm(0, 0.001)
+
+  # root node prior - global precision
+  tau ~ dgamma(0.1, 0.1)
+  sig <- pow(tau, -0.5)
+  
+  # posterior predictive loss is the posterior mean of Dsum
+  Dsum <- sum(Sqdiff[])
+}
