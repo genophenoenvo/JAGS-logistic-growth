@@ -1,0 +1,12 @@
+.Rhistory
+.Rproj.user
+*.Rproj
+
+# Suppress raw data files
+data_raw/
+
+# Suppress clean data inputs (.txts)
+data_clean/*.txt
+
+# Suppress data figures
+data_figs/
