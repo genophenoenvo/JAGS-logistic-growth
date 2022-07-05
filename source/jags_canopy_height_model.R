@@ -1,5 +1,8 @@
-# Script version to run hierarchical model
-### JAGS model equivalent of Ryan's sorghum HMS logistic growth model
+# Script version to test models
+# Updated 7/2022 to account for
+# a)  non-random block, was a stratified random that clustered short, medium and
+# tall genotypes into distinct blocks
+# b)  drought treatment in season 4 that should be a fixed factor
 
 library(dplyr)
 library(ggplot2)
@@ -16,18 +19,38 @@ set.seed(5)
 season6 <- na.omit(read.table(file = "data_clean/season6_combined.txt", sep = "\t", header = TRUE,
                               stringsAsFactors = FALSE))
 
+season4 <- na.omit(read.table(file = "data_clean/season4_combined.txt", sep = "\t", header = TRUE,
+                              stringsAsFactors = FALSE))
 
 #randomly sample 1 cultivar from the season for testing model
 s6_cultivars <- sample(unique(season6$cultivar), size = 1)
+s4_cultivars <- sample(unique(season4$cultivar), size = 5)
 
-#subset season6 dataframe by 10 randomly selected cultivars
+#subset  dataframe by 10 randomly selected cultivars
 s6_subset <- season6 %>%  filter(cultivar %in% s6_cultivars) %>% 
   select(sitename, gdd, canopy_height, cultivar, date) %>% 
   arrange(date)
 
-ggplot(data = s6_subset, aes(gdd, canopy_height, color = cultivar, group = sitename)) +
+s4_subset <- season4 %>%  filter(cultivar %in% s4_cultivars) %>% 
+  select(sitename, gdd, canopy_height, cultivar, date,
+         first_water_deficit_treatment, second_water_deficit_treatment) %>% 
+  arrange(date)
+
+ggplot(data = s6_subset, 
+       aes(x = gdd, y = canopy_height,
+           color = cultivar,
+           shape = sitename)) +
   geom_point() +
-  geom_smooth()
+  geom_smooth() +
+  guides(shape = "none")
+
+ggplot(data = s4_subset, 
+       aes(x = gdd, y = canopy_height,
+           color = cultivar,
+           group = sitename)) +
+  geom_point() +
+  geom_smooth() +
+  facet_wrap(~second_water_deficit_treatment)
 
 #nls model
 c <- 90
@@ -52,39 +75,42 @@ summary(model_reparam)
 coef(model_reparam)
 
 #data list
-s6_subset$block <- as.numeric(as.factor(s6_subset$sitename))
+# s6_subset$block <- as.numeric(as.factor(s6_subset$sitename))
 datlist <- list(height = s6_subset$canopy_height,
                 gdd = s6_subset$gdd,
-                block = s6_subset$block,
-                n = nrow(s6_subset),
-                stdc = 10, stda = 10, stdb = 10,
-                nblocks = length(unique(s6_subset$block))
+                # block = s6_subset$block,
+                n = nrow(s6_subset)
+                # stdc = 10, stda = 10, stdb = 10,
+                # nblocks = length(unique(s6_subset$block))
                 )
 
 #initials list
-inits <- function(){list(mu.theta.c = rnorm(1, 0, 10), 
-                         mu.theta.a = rnorm(1, 0, 10),
-                         mu.theta.b = rnorm(1, 0, 10),
-                         tau.c.eps = runif(1, 0, 1),
-                         tau.a.eps = runif(1, 0, 1),
-                         tau.b.eps = runif(1, 0, 1),
+# inits <- function(){list(mu.theta.c = rnorm(1, 0, 10), 
+#                          mu.theta.a = rnorm(1, 0, 10),
+#                          mu.theta.b = rnorm(1, 0, 10),
+#                          tau.c.eps = runif(1, 0, 1),
+#                          tau.a.eps = runif(1, 0, 1),
+#                          tau.b.eps = runif(1, 0, 1),
+#                          tau = runif(1, 0, 1))}
+
+inits <- function(){list(theta.c = rnorm(1, 0, 10), 
+                         theta.a = rnorm(1, 0, 10),
+                         theta.b = rnorm(1, 0, 10),
                          tau = runif(1, 0, 1))}
 
 initslist <- list(inits(), inits(), inits())
 
 #initialize model
-jm <- jags.model(file = "source/jags_hierarchical.jags", 
+jm <- jags.model(file = "source/jags_simple.jags", 
                  data = datlist, 
                  inits = initslist,
                  n.chains = 3)
 
 #set parameters to monitor
 params <- c("deviance", "Dsum", 
-            "mu.theta.a", "mu.theta.b", "mu.theta.c", 
-            "tau.a.eps", "tau.b.eps", "tau.c.eps",
-            "tau", "sigs",
+            "theta.a", "theta.b", "theta.c",
+            "tau", "sig",
             "Ymax", "Ymin", "Ghalf",
-            "ymax", "ymin", "ghalf",
             "height.rep")
 
 #update and monitor samples
@@ -100,16 +126,16 @@ jm_coda <- coda.samples(model = jm,
 #diagnostic plots via mcmcplots
 mcmcplot(mcmcout = jm_coda,
          parms = c("deviance", "Dsum", "Ymax", "Ymin", "Ghalf",
-                   "sigs"))
+                   "sig"))
 
 #summarize posterior chains
 post.sum <- coda.fast(jm_coda)
 
 #match to data, plot model fit
 pred <- data.frame(s6_subset, 
-                   h.lower = post.sum[match("height.rep[1]", row.names(post.sum)):match("height.rep[63]", row.names(post.sum)),4],
-                   h.upper = post.sum[match("height.rep[1]", row.names(post.sum)):match("height.rep[63]", row.names(post.sum)),5],
-                   h.med = post.sum[match("height.rep[1]", row.names(post.sum)):match("height.rep[63]", row.names(post.sum)),2])
+                   h.lower = post.sum[match("height.rep[1]", row.names(post.sum)):match("height.rep[73]", row.names(post.sum)),4],
+                   h.upper = post.sum[match("height.rep[1]", row.names(post.sum)):match("height.rep[73]", row.names(post.sum)),5],
+                   h.med = post.sum[match("height.rep[1]", row.names(post.sum)):match("height.rep[73]", row.names(post.sum)),2])
 
 ggplot(pred, aes(x = canopy_height, y = h.med)) +
   geom_abline(slope = 1, intercept = 0, lty = 2) +
