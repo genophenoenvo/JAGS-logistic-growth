@@ -50,8 +50,7 @@ names(wide_trait_data) <- experiments
 # ================================================================
 
 # Create a vector of desired column names
-data2use <- c("sitename", "date", "cultivar", "canopy_height")
-
+data2use <- c("sitename", "date", "cultivar", "treatment", "canopy_height")
 
 # Write function to select columns
 select_data <- function(df){
@@ -123,7 +122,7 @@ raw_weather_data <- map(.x = weather_raw, .f = function(i){read.csv(i, header = 
 #assign names to list of dataframes
 names(raw_weather_data) <- c("mac_season_4_weather", "mac_season_6_weather")
 
-# Check column names of weather data
+# Check column names of weather data - why does it include deficit?
 colnames(raw_weather_data$mac_season_4_weather)
 colnames(raw_weather_data$mac_season_6_weather)
 
@@ -131,8 +130,11 @@ colnames(raw_weather_data$mac_season_6_weather)
 weather_tibbs <- map(.x = raw_weather_data, .f = function(i){as_tibble(i)})
 
 # Convert dates in list to date object for join
+# Remove columns of water deficit 
 for(i in 1:length(weather_tibbs)){
-  weather_tibbs[[i]]$date <- as_date(weather_tibbs[[i]]$date)
+  weather_tibbs[[i]] <- weather_tibbs[[i]] %>%
+    mutate(date = as_date(date)) %>%
+    select(-first_water_deficit_treatment, -second_water_deficit_treatment)
 }
 
 # Join subset weather data and trait data, changed function to all weather data
@@ -162,11 +164,11 @@ dim(combined_tibbs[[2]])
 # 4) Filter cultivars by sample size
 # ================================================================
 
-# Summarize cultivar statistics by season
+# Summarize cultivar statistics by treatment
 cult_sum <- vector(mode = "list", length = length(combined_tibbs_unq))
 for(i in 1:2){
   cult_sum[[i]] <- combined_tibbs_unq[[i]] %>% 
-    group_by(cultivar) %>%
+    group_by(cultivar, treatment) %>%
     summarize(count = length(canopy_height),
               min_height = min(canopy_height),
               max_height = max(canopy_height),
@@ -189,30 +191,45 @@ range(combined_tibbs_unq[[2]]$date)
 mac <- do.call(rbind.data.frame, combined_tibbs_unq) %>%
   mutate(season = case_when(date <= as.Date("2017-12-31") ~ "season 4",
                             date >= as.Date("2018-01-01") ~ "season 6"),
-         cultivar = factor(cultivar, levels = cult_sum[[1]]$cultivar)) %>%
+         cultivar = factor(cultivar, levels = unique(cult_sum[[1]]$cultivar)),
+         trt = case_when(treatment == "MAC Season 4: BAP water-deficit stress Aug 1-14" ~ "early drought",
+                         treatment == "MAC Season 4: BAP water-deficit stress Aug 15-30" ~ "late drought",
+                         treatment == "MAC Season 6: Sorghum" ~ "no drought")) %>%
   arrange(desc(season))
 
 # Split by cultivar, then plot
-vars <- cult_sum[[1]]$cultivar
-varslist <- split(vars, ceiling(seq_along(vars)/20))
+vars <- unique(cult_sum[[1]]$cultivar)
+varslist <- split(vars, ceiling(seq_along(vars)/8))
 
 for(i in 1:length(varslist)){
   sub <- subset(mac, cultivar %in% varslist[[i]])
   csum4 <- subset(cult_sum[[1]], cultivar %in% varslist[[i]]) %>%
-    mutate(cultivar = factor(cultivar, levels = cult_sum[[1]]$cultivar))
+    mutate(cultivar = factor(cultivar, levels = unique(cult_sum[[1]]$cultivar)),
+           season = "season 4")
   csum6 <- subset(cult_sum[[2]], cultivar %in% varslist[[i]]) %>%
-    mutate(cultivar = factor(cultivar, levels = cult_sum[[1]]$cultivar))
+    mutate(cultivar = factor(cultivar, levels = unique(cult_sum[[1]]$cultivar)),
+           season = "season 6")
+  comb <- rbind(csum4, csum6) %>%
+    mutate(trt = case_when(treatment == "MAC Season 4: BAP water-deficit stress Aug 1-14" ~ "early drought",
+                           treatment == "MAC Season 4: BAP water-deficit stress Aug 15-30" ~ "late drought",
+                           treatment == "MAC Season 6: Sorghum" ~ "no drought"),
+           lat = case_when(trt %in% c("early drought", "no drought") ~ 0,
+                           trt == "late drought" ~ 2000),
+           lon = case_when(trt %in% c("early drought", "no drought") ~ 300,
+                           trt == "late drought" ~ 50))
   fig <- ggplot() +
-    geom_point(data = sub, aes(x = gdd, y = canopy_height, col = season), alpha = 0.5) +
-    geom_text(data = csum4, aes(x = 2000, y = 50, label = round(dens,3)), 
-              color = "#F8766D", size = 3, hjust = 0, vjust = 0) +
-    geom_text(data = csum6, aes(x = 0, y = 300, label = round(dens,3)), 
-              color = "#00BFC4", size = 3, hjust = 0, vjust = 0) +
-    facet_wrap(~cultivar, ncol = 4) +
+    geom_point(data = sub, aes(x = gdd, y = canopy_height,
+                               color = trt), alpha = 0.5) +
+    geom_text(data = comb, aes(x = lat, y = lon, label = round(dens,3),
+                               color = trt),
+              size = 3, hjust = 0, vjust = 0) +
+    facet_grid(rows = vars(cultivar),
+               cols = vars(season)) +
     theme_bw()
+  fig
   
   jpeg(filename = paste0("data_figs/height_vs_gdd_", i, ".jpg"), 
-       height = 5, width = 8, units = "in", res = 300)
+       height = 5, width = 4, units = "in", res = 300)
   print(fig)
   dev.off()
 }
