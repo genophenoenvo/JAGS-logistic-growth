@@ -1,5 +1,6 @@
 # logistic growth model
 # no hierarchy
+# no fixed effects
 # reparameterized to Ymin, Ymax, and Ghalf
 
 model{
