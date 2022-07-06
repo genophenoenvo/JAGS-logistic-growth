@@ -20,8 +20,7 @@ The dense timeseries of canopy height from the gantry at Maricopa Agricultural C
 
 #### `data_clean/`
 
- - `mac_growth_rate_modeled.csv` contains the posterior median of the three modeled parameters: minimum height (cm), maximum height (cm), and maximum growth rate (cm/gdd) for each season and cultivar. Model fit is described by the $R^2$ of the predicted versus observed canopy heights. Finally, the method and method type (RE or simple) are described. This provides the phenotype data about sorghum cultivars that can be added to the original dataset on [Dryad](https://datadryad.org/stash/dataset/doi:10.5061/dryad.4b8gtht99).
-
+ - `mac_growth_rate_modeled.csv` contains the posterior median of the three modeled parameters: minimum height (cm), maximum height (cm), and maximum growth rate (cm/gdd) for each season and cultivar. Model fit is described by the $R^2$ of the predicted versus observed canopy heights. Finally, the method and method type (RE or simple) are described. This provides the phenotype data about sorghum cultivars that can be added to the original dataset from [LeBauer et al 2020](https://datadryad.org/stash/dataset/doi:10.5061/dryad.4b8gtht99).
 
 #### `scripts/`
 
@@ -40,3 +39,7 @@ The dense timeseries of canopy height from the gantry at Maricopa Agricultural C
 ## Additional notes
 
 The data and code are available on [GitHub](https://github.com/genophenoenvo/JAGS-logistic-growth). 
+
+**References** 
+
+LeBauer, David et al. (2020), Data From: TERRA-REF, An open reference data set from high resolution genomics, phenomics, and imaging sensors, Dryad, Dataset, https://doi.org/10.5061/dryad.4b8gtht99
