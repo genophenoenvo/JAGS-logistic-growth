@@ -2,7 +2,7 @@
 # Updated 7/2022 to account for
 # a)  non-random block, was a stratified random that clustered short, medium and
 # tall genotypes into distinct blocks
-# b)  drought treatment in season 4 that should be a fixed factor
+# b)  restrict season4 to before Aug 1
 
 library(dplyr)
 library(ggplot2)
@@ -20,7 +20,10 @@ season6 <- na.omit(read.table(file = "data_clean/season6_combined.txt", sep = "\
                               stringsAsFactors = FALSE))
 
 season4 <- na.omit(read.table(file = "data_clean/season4_combined.txt", sep = "\t", header = TRUE,
-                              stringsAsFactors = FALSE))
+                              stringsAsFactors = FALSE)) %>%
+  mutate(drought = case_when(treatment == "MAC Season 4: BAP water-deficit stress Aug 1-14" ~ "early",
+                             treatment == "MAC Season 4: BAP water-deficit stress Aug 15-30" ~ "late"),
+         date = as.Date(date, tzone = "America/Phoenix"))
 
 #randomly sample 1 cultivar from the season for testing model
 s6_cultivars <- sample(unique(season6$cultivar), size = 1)
@@ -33,8 +36,11 @@ s6_subset <- season6 %>%  filter(cultivar %in% s6_cultivars) %>%
 
 s4_subset <- season4 %>%  filter(cultivar %in% s4_cultivars) %>% 
   select(sitename, gdd, canopy_height, cultivar, date,
-         first_water_deficit_treatment, second_water_deficit_treatment) %>% 
+         drought) %>% 
   arrange(date)
+
+s4_subset_aug1 <- s4_subset %>%
+  filter(date < as.Date("2017-08-01", tzone = "America/Phoenix"))
 
 ggplot(data = s6_subset, 
        aes(x = gdd, y = canopy_height,
@@ -44,13 +50,16 @@ ggplot(data = s6_subset,
   geom_smooth() +
   guides(shape = "none")
 
-ggplot(data = s4_subset, 
-       aes(x = gdd, y = canopy_height,
-           color = cultivar,
-           group = sitename)) +
-  geom_point() +
+ggplot() +
+  geom_point(data = s4_subset, 
+             aes(x = gdd, y = canopy_height,
+                 group = sitename)) +
+  geom_point(data = s4_subset_aug1, 
+             aes(x = gdd, y = canopy_height,
+                 color = cultivar,
+                 group = sitename)) +
   geom_smooth() +
-  facet_wrap(~second_water_deficit_treatment)
+  facet_wrap(~drought)
 
 #nls model
 c <- 90
@@ -76,10 +85,10 @@ coef(model_reparam)
 
 #data list
 # s6_subset$block <- as.numeric(as.factor(s6_subset$sitename))
-datlist <- list(height = s6_subset$canopy_height,
-                gdd = s6_subset$gdd,
+datlist <- list(height = s4_subset_aug1$canopy_height,
+                gdd = s4_subset_aug1$gdd,
                 # block = s6_subset$block,
-                n = nrow(s6_subset)
+                n = nrow(s4_subset_aug1)
                 # stdc = 10, stda = 10, stdb = 10,
                 # nblocks = length(unique(s6_subset$block))
                 )
@@ -100,10 +109,14 @@ inits <- function(){list(theta.c = rnorm(1, 0, 10),
 
 initslist <- list(inits(), inits(), inits())
 
+inits_restart <- list(saved.state[[2]][[1]],
+                      saved.state[[2]][[2]],
+                      saved.state[[2]][[2]])
+
 #initialize model
 jm <- jags.model(file = "source/jags_simple.jags", 
                  data = datlist, 
-                 inits = initslist,
+                 inits = inits_restart,
                  n.chains = 3)
 
 #set parameters to monitor
@@ -127,6 +140,17 @@ jm_coda <- coda.samples(model = jm,
 mcmcplot(mcmcout = jm_coda,
          parms = c("deviance", "Dsum", "Ymax", "Ymin", "Ghalf",
                    "sig"))
+
+# saved state
+newinits <- initfind(coda = jm_coda, OpenBUGS = FALSE)
+newinits[[1]]
+saved.state <- removevars(newinits, variables = c(1:6))
+saved.state[[1]]
+
+which(colnames(jm_coda[[1]]) == "Dsum")
+mean(jm_coda[[1]][,1])
+mean(jm_coda[[2]][,1])
+mean(jm_coda[[3]][,1])
 
 #summarize posterior chains
 post.sum <- coda.fast(jm_coda)
