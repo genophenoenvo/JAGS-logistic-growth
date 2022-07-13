@@ -85,7 +85,7 @@ dur <- (end-start)[[3]]/60/60
 start <- proc.time()
 # 325 cultivars
 out.s6 <- lapply(s6.list.clean, FUN = fit_logistic_growth,
-                 type = "RE", outdir = "model_output/season6")
+                 type = "simple", outdir = "model_output/season6")
 # cultivar SP1516
 fit_logistic_growth(data = s6.sp1516,
                     type = "simple",
