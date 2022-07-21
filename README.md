@@ -12,6 +12,8 @@ DOI:
 
 The dense timeseries of canopy height from the gantry at Maricopa Agricultural Center capture the trajectory of plant growth, but result in too many variables to be used in other analyses. While simple summary statistics such as mean, max, and min can be easily calculated, they may not be the most biologically relevant and are subject to outliers. Therefore, we developed a cleaning algorithm to QA/QC the MAC canopy height data and a function to apply a Bayesian logistic regression to obtain height and growth parameters for each cultivar.  
 
+Season 4 and season 6 data were both available, but season 4 cultivars were subject to two late-season drought treatments. Due to lack of controls and unbalanced design, season 4 and season 6 parameters were not comparable. 
+
 ## Files and Folders
 
  - `logistic_growth_by_cultivar.Rmd` runs the fit_logistic_growth.R function for each cultivar in season 4 and season6. Cultivar SP1516 in season 6 was grown at 99 sites, including many with sparse measurements. Thus, it was modeled with the simple model. Model summaries are combined for both seasons into `data_clean/mac_growth_rate_modeled.csv`.
