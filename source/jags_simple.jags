@@ -16,7 +16,7 @@ model{
     Sqdiff[i] <- pow(height.rep[i] - height[i], 2)
   }
   
-  # reparameterization to meaninful parameters
+  # reparameterization to meaningful parameters
   Ymax <- c
   Ymin <- c / (1 + a)
   Ghalf <- -1 * (c * b) / 4
