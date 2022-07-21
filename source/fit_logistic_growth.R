@@ -116,7 +116,7 @@ fit_logistic_growth <- function(data, type = "simple", outdir) {
   gel <- gelman.diag(jm_coda, multivariate = F)
   gel2 <- gel$psrf[match(conv.params, row.names(gel$psrf)),1]
   n.update <- 0 
-  if (max(gel2) > 1.3) {
+  if (max(gel2) > 1.2) {
     warning("model did not converge; restarting with saved state")
     n.update <- 1
     saved.state <- initfind(jm_coda)
@@ -144,7 +144,7 @@ fit_logistic_growth <- function(data, type = "simple", outdir) {
   }
   
   # Second convergence check: update with lowest saved state and re-run if not converged
-  if (max(gel2) > 1.3) {
+  if (max(gel2) > 1.2) {
     warning("model did not converge; restarting with saved state with lowest Dsum")
     n.update <- 2
     saved.state <- initfind(jm_coda)
