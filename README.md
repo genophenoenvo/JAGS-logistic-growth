@@ -1,4 +1,6 @@
 # *Sorghum bicolor bicolor* parameters from Bayesian logistic regression
+![image](https://user-images.githubusercontent.com/12022076/192391981-2431c7f4-9572-4961-abec-2b3a15db3ab7.png)
+
 
 Preferred citation: Guo, Jessica S.; Ryan P. Bartelme; David S. LeBauer.(2021) "Sorghum bicolor bicolor parameters from Bayesian logistic regression".
 
