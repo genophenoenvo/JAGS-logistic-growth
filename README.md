@@ -18,7 +18,9 @@ Season 4 and season 6 data were both available, but season 4 cultivars were subj
 
 Automated measurements of plant height over the growing season were fit with a logistic growth curve to obtain the traits of maximum plant height and maximum growth rate relative to growing degree days (gdd, [McMaster & Wilhelm 1997](https://www.google.com/url?q=https://doi.org/10.1016/S0168-1923(97)00027-0&sa=D&source=docs&ust=1664228124277588&usg=AOvVaw2-5UHgL2m_Z-xosjdx37RY)). This approach can yield phenotypic traits that are less sensitive to outliers, more comparable across environmental conditions, and permit greater biological inference. First, we applied a cleaning algorithm which excluded cultivars with N \< 35 or density or had measurements on fewer than 40% of days which yielded a total of 326 cultivars.
 
-Plant height and gdd for each cultivar were modeled in a Bayesian framework with the likelihood: $height_i \sim Normal(\mu_i, \sigma^2)$
+Plant height and gdd for each cultivar were modeled in a Bayesian framework with the likelihood: 
+
+$height_i \sim Normal(\mu_i, \sigma^2)$
 
 where $\mu$ is the expected value of each height, $\sigma^2$ is the measurement error variance, and $i$ indexes each observation. The logistic model was defined as:
 
