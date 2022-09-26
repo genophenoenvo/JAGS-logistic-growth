@@ -6,7 +6,7 @@ Corresponding author: Jessica S. Guo, University of Arizona, [jessicaguo\@email.
 
 License: CC0
 
-DOI:
+[DOI](https://doi.org/10.5281/zenodo.7114676)
 
 ## Summary
 
