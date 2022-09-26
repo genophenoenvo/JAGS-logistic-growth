@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this research compendium, please cite it as below."
+authors:
+- family-names: "Guo"
+  given-names: "Jessica"
+  orcid: "https://orcid.org/0000-0002-9566-9182"
+- family-names: "Bartelme"
+  given-names: "Ryan"
+  orcid: "https://orcid.org/0000-0002-6178-2603"
+- family-names: "LeBauer"
+  given-names: "David"
+  orcid: "https://orcid.org/0000-0001-7228-053X"
+title: "JAGS-logistic-growth"
+version: 0.1.0
+doi: 10.5281/zenodo.7114677
+date-released: 2022-09-26
+url: "https://github.com/genophenoenvo/JAGS-logistic-growth"
