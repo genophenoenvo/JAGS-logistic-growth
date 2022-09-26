@@ -8,8 +8,6 @@ Corresponding author: Jessica S. Guo, University of Arizona, [jessicaguo\@email.
 
 License: CC0
 
-[DOI](https://doi.org/10.5281/zenodo.7114676)
-
 ## Summary
 
 The dense timeseries of canopy height from the gantry at Maricopa Agricultural Center capture the trajectory of plant growth, but result in too many variables to be used in other analyses. While simple summary statistics such as mean, max, and min can be easily calculated, they may not be the most biologically relevant and are subject to outliers. Therefore, we developed a cleaning algorithm to QA/QC the MAC canopy height data and a function to apply a Bayesian logistic regression to obtain height and growth parameters for each cultivar.
