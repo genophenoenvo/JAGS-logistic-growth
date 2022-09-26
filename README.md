@@ -34,7 +34,9 @@ $Y_{min} = \frac{c}{1+a}$
 
 $R_{half} = - \frac{c \cdot b}{4}$
 
-Logistic parameters were further transformed to the whole real line: $c = e^{\theta_c}$
+Logistic parameters were further transformed to the whole real line: 
+
+$c = e^{\theta_c}$
 
 $a = e^{\theta_a} - 1$
 
