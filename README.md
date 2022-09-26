@@ -46,7 +46,7 @@ All root nodes were given wide, relatively non-informative standard priors, incl
 
 The above model was implemented in JAGS 4.3.0 ([Plummer, 2003](http://www.ci.tuwien.ac.at/Conferences/DSC-2003/Drafts/Plummer.pdf) via R/rjags. Three parallel Markov chain Monte Carlo (MCMC) sequences were assigned dispersed starting values. Models were initially run until convergence was achieved at a Rubin and Gelman ([1992](https://www.jstor.org/stable/2246093)) diagnostic \< 1.2. An additional run of 10000 iterations per chain thinned by 10 yielded a total of 3000 relatively independent posterior samples for each parameter of interest. The posterior median of $Y_{max}$ (maximum height, cm) and $R_{half}$ (maximum growth rate, cm/gdd) of each cultivar are summarized [here](https://github.com/genophenoenvo/JAGS-logistic-growth/blob/main/data_clean/mac_growth_rate_modeled_season6.csv).
 
-Files and Folders
+## Files and Folders
 
 -   `logistic_growth_by_cultivar.Rmd` runs the fit_logistic_growth.R function for each cultivar in season 4 and season6. Cultivar SP1516 in season 6 was grown at 99 sites, including many with sparse measurements. Thus, it was modeled with the simple model. Model summaries are combined for both seasons into `data_clean/mac_growth_rate_modeled.csv`.
 
