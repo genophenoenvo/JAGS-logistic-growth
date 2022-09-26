@@ -4,7 +4,7 @@
 
 Preferred citation: Guo, Jessica S.; Ryan P. Bartelme; David S. LeBauer.(2021) "Sorghum bicolor bicolor parameters from Bayesian logistic regression".
 
-Corresponding author: Jessica S. Guo, University of Arizona, [jessicaguo\@email.arizona.edu](mailto:jessicaguo@email.arizona.edu){.email}
+Corresponding author: Jessica S. Guo, University of Arizona, [jessicaguo\@email.arizona.edu](mailto:jessicaguo@email.arizona.edu)
 
 License: CC0
 
